@@ -59,7 +59,7 @@ static CYASSL_CTX *get_cyassl_ctx(void);
 char *
 http_get(const int sockfd, const char *req)
 {
-    ssize_t numbytes;
+    int numbytes;
     int done, nfds;
     fd_set readfds;
     struct timeval timeout;

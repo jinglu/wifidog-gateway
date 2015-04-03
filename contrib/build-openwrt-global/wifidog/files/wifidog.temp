@@ -1,0 +1,187 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2006 OpenWrt.org
+# Updated from post https://dev.openwrt.org/ticket/14761
+
+USE_PROCD=1
+
+START=65
+EXTRA_COMMANDS="status"
+EXTRA_HELP="        status Print the status of the service"
+
+WIFIDOG_CONF=/etc/wifidog.conf
+
+validate_section_wifidog() {
+	uci_validate_section wifidog wifidog "${1}" \
+	'GatewayID '' \
+	ExternalInterface 'eth0' \
+	GatewayInterface 'br-lan' \
+	GatewayAddress '192.168.1.1' \
+	HtmlMessageFile '/etc/wifidog-msg.html' \
+	Daemon '1' \
+	GatewayPort '2060' \
+	ProxyPort '0' \
+	HTTPDName 'WiFiDog' \
+	HTTPDMaxConn '20' \
+	HTTPDRealm 'WiFiDog' \
+	HTTPDUserName '' \
+	HTTPDPassword '' \
+	CheckInterval '90' \
+	ClientTimeout '4' \
+	TrustedMACList '' \
+
+	'PasswordAuth:bool:1' \
+	'enable:bool:1' \
+	'Interface:string' \
+	'GatewayPorts:integer:0' \
+	'RootPasswordAuth:bool:1' \
+	'RootLogin:bool:1' \
+	'rsakeyfile:file' \
+	'dsskeyfile:file' \
+	'BannerFile:file' \
+	'Port:list(port):22'
+	return $?
+}
+
+start_service() {
+        procd_open_instance
+        procd_set_param command /usr/bin/wifidog
+	procd_append_param command -f
+        procd_set_param respawn # respawn automatically if something died, be careful if you have an alternative process supervisor
+        procd_set_param file $WIFIDOG_CONF
+        procd_close_instance
+}
+
+stop_service() {
+        /usr/bin/wdctl stop
+}
+
+status() {
+	/usr/bin/wdctl status
+}
+
+service_triggers() {
+	
+	### UCI config validation
+	procd_add_validation validate_section_wifidog
+        ### Reload service on network change
+        procd_add_reload_interface_trigger "$(grep 'GatewayInterface' $WIFIDOG_CONF | grep -v ^# | awk '{print $2}')"
+	### Reload service on UCI config change
+        procd_add_reload_trigger "wifidog"
+}
+
+config local
+
+config authserver
+	option Hostname 'auth.ilesansfil.org'
+	option SSLAvailable 'yes'
+	option SSLPort '443'
+	option Path '/'
+config authserver
+	option Hostname 'auth2.ilesansfil.org'
+	option SSLAvailable 'yes'
+	option SSLPort '443'
+	option Path '/'
+
+config FWRS_global
+	option proto ''
+	option src ''
+	option src_port ''
+	option dest '192.168.0.0/16'
+	option dest_port ''
+	option action 'block'
+
+config FWRS_global
+	option proto ''
+	option src ''
+	option src_port ''
+	option dest '172.16.0.0/12'
+	option dest_port ''
+	option action 'block'
+
+config FWRS_global
+	option proto ''
+	option src ''
+	option src_port ''
+	option dest '10.0.0.0/8'
+	option dest_port ''
+	option action 'block'
+
+config FWRS_global
+	option proto ''
+	option src ''
+	option src_port ''
+	option dest '0.0.0.0/0'
+	option dest_port ''
+	option action 'log'
+
+config FWRS_validating-users
+	option proto ''
+	option src ''
+	option src_port ''
+	option dest '0.0.0.0/0'
+	option dest_port ''
+	option action 'allow'
+
+config FWRS_known-users
+	option proto ''
+	option src ''
+	option src_port ''
+	option dest '0.0.0.0/0'
+	option dest_port ''
+	option action 'allow'
+
+config FWRS_unknown-users
+	option proto 'udp'
+	option src ''
+	option src_port ''
+	option dest ''
+	option dest_port '53'
+	option action 'allow'
+
+config FWRS_unknown-users
+	option proto 'tcp'
+	option src ''
+	option src_port ''
+	option dest ''
+	option dest_port '53'
+	option action 'allow'
+
+config FWRS_unknown-users
+	option proto 'udp'
+	option src ''
+	option src_port ''
+	option dest ''
+	option dest_port '67'
+	option action 'allow'
+
+config FWRS_unknown-users
+	option proto 'tcp'
+	option src ''
+	option src_port ''
+	option dest ''
+	option dest_port '67'
+	option action 'allow'
+
+config FWRS_unknown-users
+	option proto 'udp'
+	option src ''
+	option src_port ''
+	option dest ''
+	option dest_port '22'
+	option action 'drop'
+
+config FWRS_unknown-users
+	option proto 'tcp'
+	option src ''
+	option src_port ''
+	option dest ''
+	option dest_port '22'
+	option action 'drop'
+
+config FWRS_locked-users
+	option proto ''
+	option src ''
+	option src_port ''
+	option dest '0.0.0.0/0'
+	option dest_port ''
+	option target 'block'

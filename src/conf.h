@@ -71,6 +71,7 @@
 #define DEFAULT_AUTHSERVSSLCERTPATH "/etc/ssl/certs/"
 /** Note that DEFAULT_AUTHSERVSSLNOPEERVER must be 0 or 1, even if the config file syntax is yes or no */
 #define DEFAULT_AUTHSERVSSLPEERVER 1    /* 0 means: Enable peer verification */
+#define DEFAULT_POPULARSERVERLIST "www.google.com,www.yahoo.com"    /* 0 means: Enable peer verification */
 #define DEFAULT_ARPTABLE "/proc/net/arp"
 /*@}*/
 
@@ -150,6 +151,14 @@ typedef struct _trusted_mac_t {
 } t_trusted_mac;
 
 /**
+ * Popular Server List
+ */
+typedef struct _popular_server_t {
+    char *server;
+    struct _popular_server_t *next;
+} t_popular_server;
+
+/**
  * Configuration structure
  */
 typedef struct {
@@ -191,6 +200,7 @@ typedef struct {
     char *ssl_cipher_list;  /**< @brief List of SSL ciphers allowed. Optional. */
     t_firewall_ruleset *rulesets;       /**< @brief firewall rules */
     t_trusted_mac *trustedmaclist; /**< @brief list of trusted macs */
+    t_popular_server *popularserverlist; /**< @brief list of urls */
     char *arp_table_path; /**< @brief Path to custom ARP table, formatted
         like /proc/net/arp */
 } s_config;
@@ -220,6 +230,8 @@ void mark_auth_server_bad(t_auth_serv *);
 t_firewall_rule *get_ruleset(const char *);
 
 void parse_trusted_mac_list(const char *);
+
+void parse_popular_server_list(const char *);
 
 #define LOCK_CONFIG() do { \
 	debug(LOG_DEBUG, "Locking config"); \

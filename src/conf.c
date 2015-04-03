@@ -96,6 +96,7 @@ typedef enum {
     oFirewallRule,
     oFirewallRuleSet,
     oTrustedMACList,
+    oPopularServerList,
     oHtmlMessageFile,
     oProxyPort,
     oSSLPeerVerification,
@@ -140,6 +141,7 @@ static const struct {
     "firewallruleset", oFirewallRuleSet}, {
     "firewallrule", oFirewallRule}, {
     "trustedmaclist", oTrustedMACList}, {
+    "popularserverlist", oPopularServerList}, {
     "htmlmessagefile", oHtmlMessageFile}, {
     "proxyport", oProxyPort}, {
     "sslpeerverification", oSSLPeerVerification}, {
@@ -192,6 +194,7 @@ config_init(void)
     config.internal_sock = safe_strdup(DEFAULT_INTERNAL_SOCK);
     config.rulesets = NULL;
     config.trustedmaclist = NULL;
+    config.popularserverlist = DEFAULT_POPULARSERVERLIST;
     config.proxy_port = 0;
     config.ssl_certs = safe_strdup(DEFAULT_AUTHSERVSSLCERTPATH);
     config.ssl_verify = DEFAULT_AUTHSERVSSLPEERVER;
@@ -707,6 +710,9 @@ config_read(const char *filename)
                 case oTrustedMACList:
                     parse_trusted_mac_list(p1);
                     break;
+                case oPopularServerList:
+                    parse_popular_server_list(p1);
+                    break;
                 case oHTTPDName:
                     config.httpdname = safe_strdup(p1);
                     break;
@@ -886,6 +892,69 @@ parse_trusted_mac_list(const char *ptr)
     free(ptrcopy);
 
     free(mac);
+
+}
+
+void
+parse_popular_server_list(const char *ptr)
+{
+    char *ptrcopy = NULL;
+    char *possibleserver = NULL;
+    char *server = NULL;
+    t_popular_server *p = NULL;
+
+    debug(LOG_DEBUG, "Parsing string [%s] for trusted server URLs", ptr);
+
+    server = safe_malloc(18);
+
+    /* strsep modifies original, so let's make a copy */
+    ptrcopy = safe_strdup(ptr);
+
+    while ((possibleserver = strsep(&ptrcopy, ", "))) {
+        if (sscanf(possibleserver, " %17[A-Fa-f0-9.]", server) == 1) {
+            /* Copy server to the list */
+
+            debug(LOG_DEBUG, "Adding server address [%s] to trusted list", server);
+
+            if (config.popularserverlist == NULL) {
+                config.popularserverlist = safe_malloc(sizeof(t_popular_server));
+                config.popularserverlist->server = safe_strdup(server);
+                config.popularserverlist->next = NULL;
+            } else {
+                int skipserver;
+                /* Advance to the last entry */
+                p = config.popularserverlist;
+                skipserver = 0;
+                /* Check before loop to handle case were server is a duplicate
+                * of the first and only item in the list so far.
+                */
+                if (0 == strcmp(p->server, server)) {
+                    skipserver = 1;
+                }
+                while (p->next != NULL) {
+                    if (0 == strcmp(p->server, server)) {
+                        skipserver = 1;
+                    }
+                    p = p->next;
+                }
+                if (!skipserver) {
+                    p->next = safe_malloc(sizeof(t_popular_server));
+                    p = p->next;
+                    p->server = safe_strdup(server);
+                    p->next = NULL;
+                } else {
+                    debug(LOG_ERR,
+                          "server address [%s] already in list. See option PopularServerList in wifidog.conf file ",
+                           server);
+                }
+            }
+        }
+    }
+
+
+free(ptrcopy);
+
+free(server);
 
 }
 

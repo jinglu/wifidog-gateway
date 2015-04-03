@@ -161,9 +161,7 @@ _connect_auth_server(int level)
     struct in_addr *h_addr;
     int num_servers = 0;
     char *hostname = NULL;
-    t_popular_server *p;
-    char *popular_servers[] = {
-	config.popularserverlist,
+    char *popular_servers[] = {	config->popularserverlist,
         NULL
     };
     char **popularserver;
